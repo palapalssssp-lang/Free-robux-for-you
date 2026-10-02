@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0f0f0f">
+  <link rel="manifest" href="/manifest.json">
+  <title>Rekam Latar Belakang</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px;
+      position: relative;
+    }
+    .gear-btn {
+      position: fixed;
+      top: 16px;
+      right: 16px;
+      width: 48px;
+      height: 48px;
+      background: #1f1f1f;
+      border: 2px solid #333;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      cursor: pointer;
+      z-index: 100;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    h1 { font-size: 1.35rem; margin: 20px 0 6px; text-align: center; }
+    .info { font-size: 0.82rem; color: #aaa; margin-bottom: 20px; text-align: center; }
+    .btn-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+      max-width: 320px;
+    }
+    button {
+      padding: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+    }
+    #btnScreen { background: #34a853; color: white; }
+    #btnCamera { background: #1a73e8; color: white; }
+    #btnStop { background: #ea4335; color: white; display: none; }
+    button:disabled { opacity: 0.45; }
+    #timer { font-size: 3rem; font-weight: 700; margin: 22px 0 10px; }
+    #status { color: #fbbc04; font-size: 0.95rem; min-height: 24px; text-align: center; }
+    video {
+      width: 100%;
+      max-width: 360px;
+      border-radius: 12px;
+      background: #222;
+      margin-top: 18px;
+      display: none;
+    }
+    .download-area { margin-top: 16px; display: none; }
+    a.download {
+      display: inline-block;
+      background: #fbbc04;
+      color: #000;
+      padding: 12px 24px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    /* Panel */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.85);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .panel {
+      background: #1a1a1a;
+      width: 100%;
+      max-width: 380px;
+      max-height: 85vh;
+      border-radius: 16px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      border: 1px solid #333;
+    }
+    .panel-header {
+      padding: 16px;
+      background: #222;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #333;
+    }
+    .close-btn { background: none; border: none; color: #fff; font-size: 1.5rem; cursor: pointer; }
+    .lock-area { padding: 30px 20px; text-align: center; }
+    .lock-area input {
+      width: 100%;
+      padding: 14px;
+      font-size: 1.2rem;
+      text-align: center;
+      border-radius: 10px;
+      border: 2px solid #444;
+      background: #111;
+      color: #fff;
+      margin: 16px 0;
+      letter-spacing: 2px;
+    }
+    .lock-area button { width: 100%; background: #34a853; color: white; }
+    .recordings-list { flex: 1; overflow-y: auto; padding: 12px; display: none; }
+    .rec-item {
+      background: #252525;
+      border-radius: 10px;
+      padding: 12px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .rec-info { flex: 1; }
+    .rec-info .name { font-weight: 600; font-size: 0.95rem; }
+    .rec-info .date { font-size: 0.75rem; color: #888; margin-top: 2px; }
+    .rec-actions button {
+      padding: 8px 10px;
+      font-size: 0.8rem;
+      border-radius: 8px;
+      margin-left: 4px;
+    }
+    .btn-play { background: #1a73e8; color: white; }
+    .btn-dl { background: #fbbc04; color: #000; }
+    .btn-del { background: #ea4335; color: white; }
+    .empty { text-align: center; color: #666; padding: 40px 20px; }
+  </style>
+</head>
+<body>
+  <div class="gear-btn" id="gearBtn">⚙️</div>
+
+  <h1>Rekam Latar Belakang</h1>
+  <p class="info">Shared • Semua orang bisa lihat<br>Kode akses: 312312322</p>
+
+  <div class="btn-group">
+    <button id="btnScreen">Rekam Latar Belakang</button>
+    <button id="btnCamera">Rekam Kamera</button>
+    <button id="btnStop">Stop Sekarang</button>
+  </div>
+
+  <div id="timer">00:00</div>
+  <div id="status"></div>
+
+  <video id="preview" autoplay muted playsinline></video>
+  <video id="result" controls playsinline></video>
+
+  <div class="download-area" id="downloadArea">
+    <a id="downloadLink" class="download" download="rekaman.webm">Download</a>
+  </div>
+
+  <!-- Panel -->
+  <div class="overlay" id="overlay">
+    <div class="panel">
+      <div class="panel-header">
+        <h2>📁 Semua Rekaman</h2>
+        <button class="close-btn" id="closePanel">×</button>
+      </div>
+
+      <div class="lock-area" id="lockArea">
+        <div style="font-size: 2.5rem;">🔒</div>
+        <div>Masukkan kode akses</div>
+        <input type="password" id="pinInput" placeholder="Kode..." inputmode="numeric">
+        <button id="unlockBtn">Buka</button>
+        <div id="pinError" style="color:#ea4335; margin-top:10px;"></div>
+      </div>
+
+      <div class="recordings-list" id="recordingsList">
+        <div class="empty" id="emptyState">Belum ada rekaman</div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API = window.location.origin;
+
+    // ===== Gear & Panel =====
+    const gearBtn = document.getElementById('gearBtn');
+    const overlay = document.getElementById('overlay');
+    const closePanel = document.getElementById('closePanel');
+    const lockArea = document.getElementById('lockArea');
+    const recordingsList = document.getElementById('recordingsList');
+    const pinInput = document.getElementById('pinInput');
+    const unlockBtn = document.getElementById('unlockBtn');
+    const pinError = document.getElementById('pinError');
+    const emptyState = document.getElementById('emptyState');
+
+    let currentPin = '';
+
+    gearBtn.onclick = () => {
+      overlay.style.display = 'flex';
+      lockArea.style.display = 'block';
+      recordingsList.style.display = 'none';
+      pinInput.value = '';
+      pinError.textContent = '';
+    };
+
+    closePanel.onclick = () => overlay.style.display = 'none';
+
+    unlockBtn.onclick = async () => {
+      const pin = pinInput.value.trim();
+      const res = await fetch(`${API}/api/verify-pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin })
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        currentPin = pin;
+        lockArea.style.display = 'none';
+        recordingsList.style.display = 'block';
+        loadRecordings();
+      } else {
+        pinError.textContent = 'Kode salah!';
+        pinInput.value = '';
+      }
+    };
+
+    pinInput.addEventListener('keypress', e => {
+      if (e.key === 'Enter') unlockBtn.click();
+    });
+
+    async function loadRecordings() {
+      const res = await fetch(`${API}/api/recordings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: currentPin })
+      });
+      const list = await res.json();
+
+      recordingsList.innerHTML = '';
+      if (!list.length) {
+        recordingsList.appendChild(emptyState);
+        emptyState.style.display = 'block';
+        return;
+      }
+
+      list.forEach(rec => {
+        const item = document.createElement('div');
+        item.className = 'rec-item';
+        item.innerHTML = `
+          <div class="rec-info">
+            <div class="name">${rec.originalName}</div>
+            <div class="date">${new Date(rec.date).toLocaleString('id-ID')}</div>
+          </div>
+          <div class="rec-actions">
+            <button class="btn-play">Play</button>
+            <button class="btn-dl">DL</button>
+            <button class="btn-del">Hapus</button>
+          </div>
+        `;
+
+        item.querySelector('.btn-play').onclick = () => {
+          const v = document.getElementById('result');
+          v.src = `\( {API}/api/video/ \){rec.id}`;
+          v.style.display = 'block';
+          v.play();
+          overlay.style.display = 'none';
+        };
+
+        item.querySelector('.btn-dl').onclick = () => {
+          const a = document.createElement('a');
+          a.href = `\( {API}/api/video/ \){rec.id}`;
+          a.download = rec.originalName + '.webm';
+          a.click();
+        };
+
+        item.querySelector('.btn-del').onclick = async () => {
+          if (!confirm('Hapus rekaman ini?')) return;
+          await fetch(`${API}/api/delete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: currentPin, id: rec.id })
+          });
+          loadRecordings();
+        };
+
+        recordingsList.appendChild(item);
+      });
+    }
+
+    // ===== Recorder =====
+    const btnScreen = document.getElementById('btnScreen');
+    const btnCamera = document.getElementById('btnCamera');
+    const btnStop = document.getElementById('btnStop');
+    const timerEl = document.getElementById('timer');
+    const statusEl = document.getElementById('status');
+    const preview = document.getElementById('preview');
+    const result = document.getElementById('result');
+    const downloadArea = document.getElementById('downloadArea');
+    const downloadLink = document.getElementById('downloadLink');
+
+    let mediaRecorder, stream, timerInterval, seconds = 0;
+    const MAX = 30;
+    let currentType = 'screen';
+
+    function updateTimer() {
+      timerEl.textContent = String(Math.floor(seconds/60)).padStart(2,'0') + ':' + String(seconds%60).padStart(2,'0');
+    }
+
+    function resetUI() {
+      btnScreen.disabled = false;
+      btnCamera.disabled = false;
+      btnStop.style.display = 'none';
+      preview.style.display = 'none';
+      result.style.display = 'none';
+      downloadArea.style.display = 'none';
+      statusEl.textContent = '';
+      seconds = 0;
+      updateTimer();
+      if (timerInterval) clearInterval(timerInterval);
+    }
+
+    function stopAll() {
+      if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (timerInterval) clearInterval(timerInterval);
+    }
+
+    async function startRec(type) {
+      currentType = type;
+      resetUI();
+      stopAll();
+
+      try {
+        if (type === 'screen') {
+          stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+          statusEl.textContent = 'Merekam latar belakang...';
+        } else {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment' },
+            audio: true
+          });
+          statusEl.textContent = 'Merekam kamera...';
+        }
+
+        preview.srcObject = stream;
+        preview.style.display = 'block';
+
+        let mime = 'video/webm;codecs=vp9,opus';
+        if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm;codecs=vp8,opus';
+        if (!MediaRecorder.isTypeSupported(mime)) mime = 'video/webm';
+
+        const chunks = [];
+        mediaRecorder = new MediaRecorder(stream, { mimeType: mime });
+
+        mediaRecorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+
+        mediaRecorder.onstop = async () => {
+          const blob = new Blob(chunks, { type: 'video/webm' });
+          statusEl.textContent = 'Mengupload...';
+
+          const form = new FormData();
+          form.append('video', blob, 'rekaman.webm');
+          form.append('type', currentType);
+          form.append('name', `\( {currentType === 'screen' ? 'Latar' : 'Kamera'}_ \){new Date().toLocaleString('id-ID')}`);
+
+          try {
+            await fetch(`${API}/api/upload`, { method: 'POST', body: form });
+            statusEl.textContent = 'Berhasil disimpan ke server!';
+          } catch (e) {
+            statusEl.textContent = 'Gagal upload';
+          }
+
+          const url = URL.createObjectURL(blob);
+          result.src = url;
+          result.style.display = 'block';
+          downloadLink.href = url;
+          downloadArea.style.display = 'block';
+          preview.style.display = 'none';
+          btnStop.style.display = 'none';
+          btnScreen.disabled = false;
+          btnCamera.disabled = false;
+        };
+
+        mediaRecorder.start(1000);
+        btnScreen.disabled = true;
+        btnCamera.disabled = true;
+        btnStop.style.display = 'block';
+
+        timerInterval = setInterval(() => {
+          seconds++;
+          updateTimer();
+          if (seconds >= MAX) stopAll();
+        }, 1000);
+
+        stream.getVideoTracks()[0].onended = () => stopAll();
+
+      } catch (err) {
+        statusEl.textContent = 'Error: ' + err.message;
+        resetUI();
+      }
+    }
+
+    btnScreen.onclick = () => startRec('screen');
+    btnCamera.onclick = () => startRec('camera');
+    btnStop.onclick = () => {
+      stopAll();
+      statusEl.textContent = 'Dihentikan';
+    };
+  </script>
+</body>
+</html>
